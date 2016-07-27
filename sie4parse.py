@@ -11,6 +11,8 @@ import csv
 import logging
 import shlex
 
+sortByDate = False
+
 def writeCsv(data, outfile):
     log = logging.getLogger("csv")
     w = csv.writer(outfile, dialect="excel")
@@ -40,6 +42,8 @@ class Entry(object):
         self.entries[account] = amount
 
     def __lt__(self, b):
+        if sortByDate and self.date != b.date:
+            return self.date < b.date
         return self.number < b.number
 
     def __str__(self):
@@ -122,11 +126,15 @@ if __name__ == "__main__":
                         help="Input SIE4 file")
     parser.add_argument("--csv", metavar="FILENAME",
                         help="Output CSV file")
+    parser.add_argument("--sort-date", action="store_true",
+                        help="Sort by date instead of number")
 
     args = parser.parse_args()
 
     data = FileData()
     data.parseFile(args.infile[0])
+
+    sortByDate = args.sort_date
 
     if args.csv:
         with open(args.csv, "w") as f:
