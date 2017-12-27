@@ -23,12 +23,32 @@ def writeCsv(data, outfile):
     w.writerow(["", "", ""] + [data.accountNames[n] for n in accountNumbers])
 
     for entry in sorted(data.entries):
-        row = [entry.number, entry.date, entry.text]
+        row = [entry.number, parseDate(entry.date), entry.text]
         row += [""] * len(accountNumbers)
         for (account, amount) in entry.entries.items():
             accountCol = accountNumbers.index(account)
             row[accountCol + 3] = amount
         w.writerow(row)
+
+def writeSie(data, outfile):
+    log = logging.getLogger("sie")
+
+    # Write the headers
+    for h, fields in data.headers.items():
+        outfile.write("#%s %s\n" % (h, " ".join(['"%s"' % f for f in fields])))
+
+    # Write the account list
+    for number, name in data.accountNames.items():
+        outfile.write('#KONTO %d "%s"\n' % (number, name))
+
+    # Write the verification list
+    for entry in sorted(data.entries):
+        outfile.write('#VER "%s" %d %s "%s"\n' % (entry.series, entry.number, entry.date, entry.text))
+        outfile.write("{\n")
+        for account, amount in entry.entries.items():
+            outfile.write("#TRANS %d {} %s\n" % (account, amount))
+        outfile.write("}\n")
+        outfile.write("\n")
 
 def parseDate(s):
     return "%s-%s-%s" % (s[0:4], s[4:6], s[6:8])
@@ -103,8 +123,9 @@ class FileData(object):
         # Fields are: series, number, date, ver text, reg date, sign
         # This field is followed by TRANS fields in brackets
         e = Entry()
+        e.series = fields[0]
         e.number = int(fields[1])
-        e.date = parseDate(fields[2])
+        e.date = fields[2]
         e.text = fields[3]
         self.entries.append(e)
 
@@ -126,6 +147,8 @@ if __name__ == "__main__":
                         help="Input SIE4 file")
     parser.add_argument("--csv", metavar="FILENAME",
                         help="Output CSV file")
+    parser.add_argument("--si", metavar="FILENAME",
+                        help="Output an SIE4 file")
     parser.add_argument("--sort-date", action="store_true",
                         help="Sort by date instead of number")
 
@@ -139,5 +162,10 @@ if __name__ == "__main__":
     if args.csv:
         with open(args.csv, "w") as f:
             writeCsv(data, f)
-    else:
+
+    if args.si:
+        with open(args.si, "w", encoding="cp437") as f:
+            writeSie(data, f)
+
+    if not args.csv and not args.si:
         logging.warning("No output file selected")
