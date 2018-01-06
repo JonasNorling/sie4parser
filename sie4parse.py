@@ -139,6 +139,15 @@ class FileData(object):
         e = self.entries[-1]
         e.addTransaction(int(fields[0]), float(fields[2]))
 
+    def removeUnusedAccounts(self):
+        usedAccounts = {}
+        for entry in self.entries:
+            for a in entry.entries:
+                usedAccounts[a] = True
+        for account in list(self.accountNames.keys()):
+            if not account in usedAccounts:
+                del self.accountNames[account]
+
 if __name__ == "__main__":
     logging.basicConfig(level=logging.DEBUG)
     
@@ -151,6 +160,8 @@ if __name__ == "__main__":
                         help="Output an SIE4 file")
     parser.add_argument("--sort-date", action="store_true",
                         help="Sort by date instead of number")
+    parser.add_argument("--cull-unused-accounts", action="store_true",
+                        help="Don't include accounts without any data")
 
     args = parser.parse_args()
 
@@ -158,6 +169,9 @@ if __name__ == "__main__":
     data.parseFile(args.infile[0])
 
     sortByDate = args.sort_date
+
+    if args.cull_unused_accounts:
+        data.removeUnusedAccounts()
 
     if args.csv:
         with open(args.csv, "w") as f:
