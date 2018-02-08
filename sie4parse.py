@@ -58,8 +58,10 @@ class Entry(object):
         self.entries = {}
 
     def addTransaction(self, account, amount):
-        assert(account not in self.entries)
-        self.entries[account] = amount
+        if account in self.entries:
+            self.entries[account] += amount
+        else:
+            self.entries[account] = amount
 
     def __lt__(self, b):
         if sortByDate and self.date != b.date:
